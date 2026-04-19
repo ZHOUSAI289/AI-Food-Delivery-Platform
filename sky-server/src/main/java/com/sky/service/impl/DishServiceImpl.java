@@ -146,4 +146,17 @@ public class DishServiceImpl implements DishService {
         }
     }
 
+    /**
+     * 改变起售、停售菜品状态
+     * @param status
+     * @param id
+     */
+    public void startOrStop(Integer status, Long id) {
+        Dish dish = Dish.builder()
+                .status(status)
+                .id(id)
+                .build();
+        dishMapper.update(dish);
+    }
+
 }
