@@ -79,30 +79,24 @@ public class DishServiceImpl implements DishService {
         // 判断当前菜品是否能够删除--是否存在起售中的菜品
         for (Long id : ids) {
             Dish dish = dishMapper.getById(id);
-            if(dish.getStatus() == StatusConstant.ENABLE)
-            //当前菜品处于起售中，不能删除
-            throw new DeletionNotAllowedException(MessageConstant.DISH_ON_SALE);
+            if (dish.getStatus() == StatusConstant.ENABLE)
+                //当前菜品处于起售中，不能删除
+                throw new DeletionNotAllowedException(MessageConstant.DISH_ON_SALE);
         }
 
         // 判断当前菜品是否能够删除--当前菜品是否有关联的套餐
-        List<Long> setmealIds =setmealDishMapper.getSetmealIdsByDishIds(ids);
-        if(setmealIds != null && setmealIds.size() > 0){
+        List<Long> setmealIds = setmealDishMapper.getSetmealIdsByDishIds(ids);
+        if (setmealIds != null && setmealIds.size() > 0) {
             //当前菜品有关联的套餐，不能删除
             throw new DeletionNotAllowedException(MessageConstant.DISH_BE_RELATED_BY_SETMEAL);
         }
 
-        // 删除菜品表中的菜品数据
-//        for (Long id : ids) {
-//            dishMapper.deleteById(id);
-//            // 删除菜品和口味表关联的数据
-//            dishFlavorMapper.deleteByDishId(id);
-//        }
-
-        //改进
-        //根据菜品id集合批量删除菜品数据
-        dishMapper.deleteByIds(ids);
-        //根据菜品id集合批量删除关联的口味数据
-        dishFlavorMapper.deleteByDishIds(ids);
+        //删除菜品表中的菜品数据
+        for (Long id : ids) {
+            dishMapper.deleteById(id);
+            // 删除菜品和口味表关联的数据
+            dishFlavorMapper.deleteByDishId(id);
+        }
     }
 
     /**
