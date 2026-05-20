@@ -141,7 +141,10 @@ public class EmployeeServiceImpl implements EmployeeService {
         return employee;
     }
 
-    @Override
+    /**
+     * 编辑员工信息
+     * @param employeeDTO
+     */
     public void update(EmployeeDTO employeeDTO) {
         Employee employee = new Employee();
         BeanUtils.copyProperties(employeeDTO, employee);

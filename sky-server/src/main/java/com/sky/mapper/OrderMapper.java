@@ -1,7 +1,11 @@
 package com.sky.mapper;
 
+import com.github.pagehelper.Page;
 import com.sky.dto.GoodsSalesDTO;
+import com.sky.dto.OrdersPageQueryDTO;
+import com.sky.entity.OrderDetail;
 import com.sky.entity.Orders;
+import com.sky.vo.OrderVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -73,4 +77,19 @@ public interface OrderMapper {
      * @return
      */
     List<GoodsSalesDTO> getSalesTop10(LocalDateTime begin, LocalDateTime end);
+
+    /**
+     * 订单分页查询
+     * @param ordersPageQueryDTO
+     * @return
+     */
+    Page<OrderVO> pageQuery4User(OrdersPageQueryDTO ordersPageQueryDTO);
+
+    /**
+     * 根据订单id查询订单详情
+     * @param orderId
+     * @return
+     */
+    @Select("select * from order_detail where order_id = #{orderId}")
+    List<OrderDetail> getByOrderId(Long orderId);
 }
