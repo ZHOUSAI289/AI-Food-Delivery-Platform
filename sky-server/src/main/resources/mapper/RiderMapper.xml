@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.RiderMapper">
+
+    <!--
+      骑手分页查询（管理端 R1）。
+
+      三个刻意为之的写法，都是被现有代码坑过才这么写的：
+
+      1) 【显式列名，不用 select *】
+         既排除 password，也保证以后给 rider 加敏感列时不会自动跟着返回。
+         反面教材：/admin/employee/page 直接 select * 出 Employee 实体发给了前端，
+         实测响应里带着真实的 MD5 密码哈希。
+
+      2) 【concat 不是 contact】
+         EmployeeMapper.xml:9 把 concat 写成了 contact，而 contact 在 MySQL 里
+         不是函数 —— 一带 name 参数就报 ERROR 1305，接口直接 500。
+         （也就是说员工管理的"按姓名搜索"目前是坏的，只有不传 name 才能用。）
+
+      3) 【order by 加了 id desc 作为兜底】
+         照抄 EmployeeMapper.xml 的话只有 "order by create_time desc"。
+         但 rider 现有的 4 行 create_time 全是 NULL（手工 SQL 插的），
+         而 MySQL 对全 NULL 的排序是不确定的 —— 分页时第 1 页和第 2 页
+         可能重复或漏记录。补一个 id desc 让顺序稳定。
+    -->
+    <select id="pageQuery" resultType="com.sky.vo.RiderVO">
+        select id, username, name, phone, status, online, create_time
+        from rider
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+        </where>
+        order by create_time desc, id desc
+    </select>
+
+</mapper>

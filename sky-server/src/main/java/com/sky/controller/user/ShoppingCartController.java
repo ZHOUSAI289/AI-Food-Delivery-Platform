@@ -45,10 +45,25 @@ public class ShoppingCartController {
         return Result.success(list);
     }
 
+    /**
+     * 一键删除购物测的所有商品
+     * @return
+     */
     @DeleteMapping("/clean")
     @ApiOperation("删除购物车")
     public Result clean(){
         shoppingCartService.cleanShoppingCart();
+        return Result.success();
+    }
+
+    /**
+     * 购物车减一
+     * @return
+     */
+    @PostMapping("/sub")
+    @ApiOperation("购物车商品减一")
+    public Result cleanOne(@RequestBody ShoppingCartDTO shoppingCartDTO){
+        shoppingCartService.cleanShoppingOneCart(shoppingCartDTO);
         return Result.success();
     }
 }

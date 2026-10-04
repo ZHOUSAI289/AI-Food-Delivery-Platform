@@ -37,36 +37,48 @@ public class EmployeeController {
     /**
      * 登录
      *
+     * 【已废弃】三端统一登录改造后，登录入口改为 POST /login（见 LoginController）。
+     *
+     * 为什么不保留这个接口：它用旧的 admin-secret-key 签发 token，而统一拦截器
+     * JwtTokenInterceptor 只认新密钥。如果放开，调用方会拿到一个"登录成功但访问什么都是 401"
+     * 的令牌，问题很难排查，所以整段注释掉。
+     *
+     * 员工登录的校验逻辑（MD5 比对、状态判断）没有浪费，
+     * 已经原样搬进了 LoginServiceImpl，EmployeeServiceImpl.login 也还留着。
+     *
      * @param employeeLoginDTO
      * @return
      */
-    @PostMapping("/login")
-    @ApiOperation(value = "员工登录")
-    public Result<EmployeeLoginVO> login(@RequestBody EmployeeLoginDTO employeeLoginDTO) {
-        log.info("员工登录：{}", employeeLoginDTO);
-
-        Employee employee = employeeService.login(employeeLoginDTO);
-
-        //登录成功后，生成jwt令牌
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(JwtClaimsConstant.EMP_ID, employee.getId());
-        String token = JwtUtil.createJWT(
-                jwtProperties.getAdminSecretKey(),
-                jwtProperties.getAdminTtl(),
-                claims);
-
-        EmployeeLoginVO employeeLoginVO = EmployeeLoginVO.builder()
-                .id(employee.getId())
-                .userName(employee.getUsername())
-                .name(employee.getName())
-                .token(token)
-                .build();
-
-        return Result.success(employeeLoginVO);
-    }
+    // @PostMapping("/login")
+    // @ApiOperation(value = "员工登录")
+    // public Result<EmployeeLoginVO> login(@RequestBody EmployeeLoginDTO employeeLoginDTO) {
+    //     log.info("员工登录：{}", employeeLoginDTO);
+    //
+    //     Employee employee = employeeService.login(employeeLoginDTO);
+    //
+    //     //登录成功后，生成jwt令牌
+    //     Map<String, Object> claims = new HashMap<>();
+    //     claims.put(JwtClaimsConstant.EMP_ID, employee.getId());
+    //     String token = JwtUtil.createJWT(
+    //             jwtProperties.getAdminSecretKey(),
+    //             jwtProperties.getAdminTtl(),
+    //             claims);
+    //
+    //     EmployeeLoginVO employeeLoginVO = EmployeeLoginVO.builder()
+    //             .id(employee.getId())
+    //             .userName(employee.getUsername())
+    //             .name(employee.getName())
+    //             .token(token)
+    //             .build();
+    //
+    //     return Result.success(employeeLoginVO);
+    // }
 
     /**
      * 退出
+     *
+     * 退出登录目前只是前端清掉本地 token，后端不需要做什么，所以保持空实现。
+     * 它挂在 /admin/** 下，只有 ADMIN 角色的 token 能通过统一拦截器。
      *
      * @return
      */

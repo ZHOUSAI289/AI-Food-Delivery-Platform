@@ -1,7 +1,44 @@
+# ==========================================================================
+# 苍穹外卖 .gitignore
+#
+# ⚠️ 有一条很重要的限制：**.gitignore 只对"还没被跟踪"的文件生效**。
+#    已经提交过的文件，就算这里写了规则也照样会被跟踪和推送 ——
+#    application-dev.yml 就是这种情况（见下面「配置」一节的说明）。
+# ==========================================================================
+
+# ===== 构建产物 =====
 **/target/
-.idea
-*.iml
 *.class
-*Test.java
-**/test/
+
+# ===== IDE =====
+.idea/
+*.iml
+# 编辑器配置一般不入库；如果你想把 .vscode/settings.json 共享给协作者，
+# 把下面这行删掉，并在下一行按需放行（前端工程用的是"忽略全部、放行 extensions.json"）
+.vscode/
+
+# ===== 操作系统文件 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 日志与本地产物 =====
+*.log
+logs/
+
+# ===== 测试 =====
+# 只挡"本地瞎试"的样例测试：它们依赖真实阿里云 OSS / 微信密钥才能跑，不适合入库。
+#
+# ⚠️ 不要再写 *Test.java 或 **/test/ —— 那会把【整个测试目录】挡在仓库外。
+#    下面这三个是要提交的（它们才是这个项目的回归测试）：
+#      sky-server/src/test/java/com/sky/service/OrderServiceUserTest.java
+#      sky-server/src/test/java/com/sky/service/RiderServiceTest.java
+#      sky-server/src/test/java/com/sky/task/OrderTaskTest.java
+sky-server/src/test/java/com/sky/set/
+
+# ===== 配置 =====
+# 这一条只对【以后新增】的 application-dev.yml 生效（比如在别的模块里再放一份）。
+# 仓库根上那份早已被跟踪、并且已经推到远程了，规则拦不住它 ——
+# 想让它真的生效必须先 `git rm --cached`，那会同时删掉远程上的文件，谨慎操作。
+# 眼下这份里放的是课程示例凭据，所以选择"接受现状"；详见 README 的安全提醒。
 **/application-dev.yml

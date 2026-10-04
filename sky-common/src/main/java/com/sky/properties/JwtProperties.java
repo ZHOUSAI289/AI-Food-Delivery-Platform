@@ -10,7 +10,15 @@ import org.springframework.stereotype.Component;
 public class JwtProperties {
 
     /**
+     * 统一登录（三端共用）：一个密钥、一个请求头，身份靠 token 里的 role claim 区分
+     */
+    private String secretKey;
+    private long ttl;
+    private String tokenName;
+
+    /**
      * 管理端员工生成jwt令牌相关配置
+     * @deprecated 已由上面的统一登录配置取代，保留是为了兼容还没删掉的旧代码
      */
     private String adminSecretKey;
     private long adminTtl;

@@ -39,6 +39,15 @@ public class Orders implements Serializable {
 
     private Long id;
 
+    //骑手id
+    private Long riderId;
+
+    //骑手名称
+    private String riderName;
+
+    //骑手手机号
+    private String riderPhone;
+
     //订单号
     private String number;
 
@@ -100,10 +109,10 @@ public class Orders implements Serializable {
     private LocalDateTime deliveryTime;
 
     //打包费
-    private int packAmount;
+    private Integer packAmount;
 
     //餐具数量
-    private int tablewareNumber;
+    private Integer tablewareNumber;
 
     //餐具数量状态  1按餐量提供  0选择具体数量
     private Integer tablewareStatus;

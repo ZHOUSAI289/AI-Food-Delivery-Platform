@@ -23,7 +23,12 @@ public interface UserMapper {
      */
     void insert(User user);
 
-    @Select("select * from user where userid = #{userid}")
+    /**
+     * 根据id查询用户信息
+     * @param userId
+     * @return
+     */
+    @Select("select * from user where id = #{id}")
     User getById(Long userId);
 
     /**

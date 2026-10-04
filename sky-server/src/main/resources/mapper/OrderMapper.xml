@@ -14,30 +14,17 @@
     <update id="update" parameterType="com.sky.entity.Orders">
         update orders
         <set>
-            <if test="cancelReason != null and cancelReason!='' ">
-                cancel_reason=#{cancelReason},
-            </if>
-            <if test="rejectionReason != null and rejectionReason!='' ">
-                rejection_reason=#{rejectionReason},
-            </if>
-            <if test="cancelTime != null">
-                cancel_time=#{cancelTime},
-            </if>
-            <if test="payStatus != null">
-                pay_status=#{payStatus},
-            </if>
-            <if test="payMethod != null">
-                pay_method=#{payMethod},
-            </if>
-            <if test="checkoutTime != null">
-                checkout_time=#{checkoutTime},
-            </if>
-            <if test="status != null">
-                status = #{status},
-            </if>
-            <if test="deliveryTime != null">
-                delivery_time = #{deliveryTime}
-            </if>
+            <if test="cancelReason != null and cancelReason!='' ">cancel_reason=#{cancelReason},</if>
+            <if test="rejectionReason != null and rejectionReason!='' ">rejection_reason=#{rejectionReason},</if>
+            <if test="cancelTime != null">cancel_time=#{cancelTime},</if>
+            <if test="payStatus != null">pay_status=#{payStatus},</if>
+            <if test="payMethod != null">pay_method=#{payMethod},</if>
+            <if test="checkoutTime != null">checkout_time=#{checkoutTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="deliveryTime != null">delivery_time = #{deliveryTime},</if>
+            <if test="riderId != null">rider_id = #{riderId},</if>
+            <if test="riderName != null">rider_name = #{riderName},</if>
+            <if test="riderPhone != null">rider_phone = #{riderPhone}</if>
         </set>
         where id = #{id}
     </update>
@@ -83,7 +70,7 @@
         order by number desc
         limit 0,10
     </select>
-    <select id="pageQuery4User" resultType="com.sky.vo.OrderVO">
+    <select id="pageQuery" resultType="com.sky.vo.OrderVO">
         select * from orders
         <where>
             <if test="number != null and number != ''">
@@ -107,5 +94,74 @@
         </where>
         order by order_time desc
     </select>
+    <select id="riderPageQuery" resultType="com.sky.vo.OrderVO">
+        select * from orders
+        where rider_id = #{riderId}
+        <if test="status != null">
+            and status = #{status}
+        </if>
+        order by order_time desc, id desc
+    </select>
+    <!--
+      以下 5 个方法都是「带状态条件的更新（CAS）」：
+      只有订单的当前状态正好等于 where 里的 status 时才会更新成功。
+      返回值是影响行数：
+          1 → 更新成功（我抢到了这单）
+          0 → 状态已被别人改变（并发冲突）或者订单不存在
+      Service 层根据影响行数决定要不要抛「订单状态错误」。
 
+      这里全部写成静态 SQL，刻意不用动态 <if> 拼字段 ——
+      动态拼 SQL 很容易在逗号上出错（本项目已经踩过两次），静态写法一眼就能看对。
+    -->
+
+    <!-- 接单：只有 2 待接单 才能改成 3 已接单 -->
+    <update id="updateConfirmOrder">
+        update orders set status = #{status} where id = #{id} and status = 2
+    </update>
+
+    <!-- 拒单：只有 2 待接单 才能改成 6 已取消 -->
+    <update id="updateRejectOrder">
+        update orders set status = #{status}, rejection_reason = #{rejectionReason}, cancel_time = #{cancelTime}
+        where id = #{id} and status = 2
+    </update>
+
+    <!-- 派单：只有 3 已接单 才能改成 4 派送中，同时绑定骑手 -->
+    <update id="updateDeliveryOrder">
+        update orders set status = #{status}, estimated_delivery_time = #{estimatedDeliveryTime},
+        rider_id = #{riderId}, rider_name = #{riderName}, rider_phone = #{riderPhone}
+        where id = #{id} and status = 3
+    </update>
+
+    <!-- 取消：只有 3 已接单 才能改成 6 已取消 -->
+    <update id="updateCancelOrder">
+        update orders set status = #{status}, cancel_reason = #{cancelReason}, cancel_time = #{cancelTime}
+        where id = #{id} and status = 3
+    </update>
+
+    <!-- 完成：只有 4 派送中 才能改成 5 已完成 -->
+    <update id="updateCompleteOrder">
+        update orders set status = #{status}, delivery_time = #{deliveryTime}
+        where id = #{id} and status = 4
+    </update>
+    <update id="updateStatus">
+        update orders set status=2, pay_status=1, checkout_time=now()
+        where id=#{id} and status=1
+    </update>
+
+    <!--
+      骑手确认送达（R8）。
+
+      where 里两个条件缺一不可：
+        rider_id = #{riderId}  ← 归属校验。它是"我能不能动这单"的一半，
+                                  不是可有可无的保险，所以【不放进可选 <if>】
+        status = 4             ← 只允许 派送中 → 已完成
+
+      影响行数 1 = 送达成功；0 = 不是他的单 / 状态已变 / 订单不存在。
+      Service 层据此再查一次决定报哪个错，且必须用带 rider_id 的那个查询 ——
+      否则就能从错误信息里区分出"别人的单存在"，把存在性漏回去。
+    -->
+    <update id="updateCompleteByRider">
+        update orders set status = #{status}, delivery_time = #{deliveryTime}
+        where id = #{id} and status = 4 and rider_id = #{riderId}
+    </update>
 </mapper>

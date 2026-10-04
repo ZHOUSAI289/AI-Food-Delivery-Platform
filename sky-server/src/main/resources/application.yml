@@ -36,6 +36,15 @@ logging:
 
 sky:
   jwt:
+    # ===== 统一登录配置（三端共用）=====
+    # 三端共用一个密钥、一个请求头 token，身份由 token 里的 role claim 区分
+    secret-key: sky-take-out-web
+    # 过期时间 2 小时（毫秒）
+    ttl: 7200000
+    # 前端传递令牌的请求头名字
+    token-name: token
+
+    # ===== 以下为旧的分端登录配置，已被统一登录取代，保留兼容 =====
     # 设置jwt签名加密时使用的秘钥
     admin-secret-key: itcast
     # 设置jwt过期时间

@@ -1,7 +1,6 @@
 package com.sky.config;
 
-import com.sky.interceptor.JwtTokenAdminInterceptor;
-import com.sky.interceptor.JwtTokenUserInterceptor;
+import com.sky.interceptor.JwtTokenInterceptor;
 import com.sky.json.JacksonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,30 +28,50 @@ import java.util.List;
 public class WebMvcConfiguration extends WebMvcConfigurationSupport {
 
     @Autowired
-    private JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
-
-    @Autowired
-    private JwtTokenUserInterceptor jwtTokenUserInterceptor;
+    private JwtTokenInterceptor jwtTokenInterceptor;
 
     /**
-     * 注册自定义拦截器
+     * 注册统一 JWT 拦截器。
      *
-     * @param registry
+     * 策略是「默认拒绝」：拦截 /** ，只有下面显式排除的公开接口才免鉴权。
+     * 这样以后新增 /warehouse/** 之类的路径，即使忘了配角色映射，
+     * 请求也会被 JwtTokenInterceptor 拒绝，而不是裸奔。
+     *
+     * （原来这里是两个拦截器各管一个前缀，安全性靠密钥不同，
+     *   新增一端就得再抄一个拦截器，容易漏。）
      */
     protected void addInterceptors(InterceptorRegistry registry) {
-        log.info("开始注册自定义拦截器...");
-        registry.addInterceptor(jwtTokenAdminInterceptor)
-                .addPathPatterns("/admin/**")
-                .excludePathPatterns("/admin/employee/login");
-
-        registry.addInterceptor(jwtTokenUserInterceptor)
-                .addPathPatterns("/user/**")
-                .excludePathPatterns("/user/user/login")
-                .excludePathPatterns("/user/shop/status");
+        log.info("开始注册统一 JWT 拦截器（默认拒绝，公开接口显式排除）...");
+        registry.addInterceptor(jwtTokenInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        // 三端统一登录入口，登录时当然还没有 token
+                        "/login",
+                        // C 端店铺营业状态：顾客在登录前就要能看到"营业中/已打烊"，
+                        // 改造前它就是公开接口，这里保持原样，不要顺手收紧
+                        "/user/shop/status",
+                        // 微信支付结果回调：由微信服务器调用，不可能带我们的 token
+                        "/notify/**",
+                        // Spring Boot 默认错误页，不能让 401 把真正的报错盖掉
+                        "/error",
+                        // knife4j / springfox 接口文档相关，下面 addResourceHandlers 里的静态资源
+                        // 会因为不是 HandlerMethod 而自动放行，但 springfox 自己的接口需要显式排除
+                        "/doc.html",
+                        "/webjars/**",
+                        "/swagger-resources",
+                        "/swagger-resources/**",
+                        "/v2/api-docs",
+                        "/v3/api-docs",
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/configuration/ui",
+                        "/configuration/security",
+                        "/favicon.ico"
+                );
     }
 
     /**
-     * 通过knife4j生成接口文档
+     * 通过knife4j生成接口文档：管理端
      * @return
      */
     @Bean
@@ -72,6 +91,10 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         return docket;
     }
 
+    /**
+     * 通过knife4j生成接口文档：用户端
+     * @return
+     */
     @Bean
     public Docket docket2() {
         ApiInfo apiInfo = new ApiInfoBuilder()
@@ -84,6 +107,59 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
                 .apiInfo(apiInfo)
                 .select()
                 .apis(RequestHandlerSelectors.basePackage("com.sky.controller.user"))
+                .paths(PathSelectors.any())
+                .build();
+        return docket;
+    }
+
+    /**
+     * 通过knife4j生成接口文档：公共接口（三端统一登录）
+     *
+     * basePackage 只能粗到 com.sky.controller，所以用 paths 精确限定到 /login，
+     * 否则会把管理端、用户端的接口也重复收进这个分组。
+     *
+     * @return
+     */
+    @Bean
+    public Docket docket3() {
+        ApiInfo apiInfo = new ApiInfoBuilder()
+                .title("苍穹外卖项目接口文档")
+                .version("2.0")
+                .description("苍穹外卖项目接口文档")
+                .build();
+        Docket docket = new Docket(DocumentationType.SWAGGER_2)
+                .groupName("公共接口")
+                .apiInfo(apiInfo)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.sky.controller"))
+                .paths(PathSelectors.ant("/login"))
+                .build();
+        return docket;
+    }
+
+    /**
+     * 通过knife4j生成接口文档：骑手端
+     *
+     * 【为什么必须单独一组】
+     * 前面三组的 basePackage 分别是 controller.admin、controller.user，
+     * 以及 controller（但 paths 只放行 /login）—— 骑手端接口（com.sky.controller.rider）
+     * 一组都覆盖不到。少了这组，/rider/** 下的接口在 /doc.html 里一个都看不到。
+     * 骑手端本来就有自己的一套前缀和角色，单独成组也和拦截器那张 PATH_ROLE_MAP 对得上。
+     *
+     * @return
+     */
+    @Bean
+    public Docket docket4() {
+        ApiInfo apiInfo = new ApiInfoBuilder()
+                .title("苍穹外卖项目接口文档")
+                .version("2.0")
+                .description("苍穹外卖项目接口文档")
+                .build();
+        Docket docket = new Docket(DocumentationType.SWAGGER_2)
+                .groupName("骑手端接口")
+                .apiInfo(apiInfo)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.sky.controller.rider"))
                 .paths(PathSelectors.any())
                 .build();
         return docket;
