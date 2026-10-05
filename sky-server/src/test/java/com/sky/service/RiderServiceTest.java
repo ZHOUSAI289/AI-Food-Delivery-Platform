@@ -61,8 +61,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * "HTTP 参数绑定 -> DTO -> 没人覆盖"这条链上，直接 new 一个 DTO 调 Service
  * 会"自觉"地把 id 填对，测试永远是绿的。
  *
- * 【⚠️ 不要使用 Java 9+ 的 API（Map.of / List.of / var 等）】
- * pom 声明的 java.version 是 1.8，IDE 按语言级别 1.8 会直接报错。
+ * 【Java 版本：17】
+ * 项目已迁到 Java 17（java.version = 17，编译目标 17；用本机 JDK 21 编译，运行时 17 / 21 都能跑），
+ * Map.of / List.of / var 这些 API 都可以正常使用。只有 body(...) 例外：它用 HashMap 而不用
+ * Map.of —— 理由是 Map.of 不接受 null 值，传 null 会抛 NPE（详见方法注释）。
  *
  * 【测试数据用 990011 / 990012 这种大 id】
  * 避开库里真实的骑手（1-4）和订单，@Transactional 结束后自动回滚。
@@ -421,7 +423,7 @@ class RiderServiceTest {
         return JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
     }
 
-    /** 构造请求体（成对的 key/value）—— 不用 Map.of，理由见类注释 */
+    /** 构造请求体（成对的 key/value）—— 不用 Map.of：它不接受 null 值，传 null 会抛 NPE，理由见类注释 */
     private static Map<String, Object> body(Object... keyValues) {
         Map<String, Object> map = new HashMap<>();
         for (int i = 0; i < keyValues.length; i += 2) {

@@ -349,6 +349,19 @@ grep -rn "io.swagger.annotations" sky-server/src
 grep -rn "@ApiOperation\|@Api(" sky-server/src
 ```
 
+- [ ] **Step 4.9: 执行时发现的 4 个缺口（已修复并验证，记录在此避免后人重踩）**
+
+| # | 缺口 | 症状 | 修法 |
+|---|---|---|---|
+| **G1** | `sky-pojo` 的 `EmployeeLoginDTO` / `EmployeeLoginVO` 还有 **12 处** springfox 注解（`@ApiModel` / `@ApiModelProperty`） | `程序包 io.swagger.annotations 不存在`，12 errors | `@ApiModel` → `@Schema`、`@ApiModelProperty` → `@Schema`（都在 `io.swagger.v3.oas.annotations.media`）。**清单原来是错的**：我的正则写成 `@Api\(`，只匹配了 `@Api(`，漏掉了 `@ApiModel*` |
+| **G2** | druid 的**坐标**（不只是版本）在 Boot 3 下变了 | Druid 自动配置不生效 → 退回 Hikari → `Failed to determine a suitable driver class`，起不来 | `druid-spring-boot-starter` → **`druid-spring-boot-3-starter`**（属性前缀不变）。旧 jar 里只有 `spring.factories`，没有 Boot 3 的 `AutoConfiguration.imports` |
+| **G3** | knife4j 4.5.0 传递进来的 **springdoc 2.3.0** 与 Spring 6.2 / Boot 3.5 不兼容 | `/v3/api-docs/{分组}` 500：`NoSuchMethodError: ControllerAdviceBean.<init>(Object)` | 根 pom 用 **`springdoc-openapi-bom` 2.8.13** 覆盖传递版本（4.5.0 已是 4.x 最新，4.5.1/4.6.x 镜像上不存在） |
+| **G4** | springdoc 的 `/v3/api-docs` 返回 `byte[]`，被本项目的 `extendMessageConverters`（把 Jackson 插到 0 号位）序列化成了 **base64** | 接口文档界面拿到 `"eyJvcGVuYXBp…"`，初始化失败 | 补 `ByteArrayHttpMessageConverter`（官方 FAQ / springdoc#2143） |
+
+**工具链注意**（与本项目有关，不属于迁移缺陷）：
+- surefire 3.x 要加 `-Dsurefire.failIfNoSpecifiedTests=false`；**且 PowerShell 里必须加引号**，否则会被拆成两个参数（Maven 报 `Unknown lifecycle phase ".failIfNoSpecifiedTests=false"`）。
+- 沙箱以低完整性级别运行时，Mockito 内联 mock maker 的 self-attach 会失败（`Could not self-attach to current VM`）；以更宽权限跑就没有这个问题。
+
 - [ ] **Step 5: 验收（测试 + 启动 + 文档）**
 
 ```bash
