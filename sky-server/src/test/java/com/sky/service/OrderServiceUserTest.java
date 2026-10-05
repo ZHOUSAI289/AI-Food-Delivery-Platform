@@ -78,12 +78,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 注意：即使用了 RANDOM_PORT，MockMvc 仍然是"进程内直接调 DispatcherServlet"、不经过网络，
  * 所以请求还是跑在测试线程上，@Transactional 的回滚依然有效。
  *
- * 【⚠️ 不要使用 Java 9+ 的 API（Map.of / List.of / var 等）】
- * 本项目 pom 继承 spring-boot-starter-parent 2.7.3，声明的 java.version 是 1.8。
- * 而 Maven 用的是 -source/-target 1.8（不是 --release 1.8），这两者**只限制语法和字节码版本、
- * 不限制类库** —— 编译器仍然拿 JDK 21 的 rt，所以 Map.of 能编过。
- * 但：IDE 按语言级别 1.8 检查会直接报错，换成 JDK 8 编译也会失败。
- * 用下面的 body(...) 工具方法代替 Map.of(...)。
+ * 【Java 版本：17】
+ * 项目已迁到 Java 17（spring-boot-starter-parent 3.5.11，java.version = 17；用本机 JDK 21 编译，
+ * 产物在 17 / 21 上都能跑），Map.of / List.of / var 这些 API 都可以正常使用。
+ * 只有下面的 body(...) 工具方法仍然用 HashMap 而不用 Map.of —— 理由是 Map.of 不接受 null 值，
+ * 传 null 会抛 NPE，排查时容易误以为是"某个值没取到"。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -654,10 +653,10 @@ class OrderServiceUserTest {
     /**
      * 构造请求体（成对的 key/value）。
      *
-     * 刻意不用 Map.of(...)，两个原因：
-     *   1. Map.of 是 Java 9+ 的 API，本项目声明的是 Java 1.8（见类注释）
-     *   2. Map.of 不接受 null 值，传了 null 会抛 NPE。排查时容易误以为是 Map 的问题，
-     *      其实是"某个值没取到"——用 HashMap 的话，null 会被照常放进去，问题更直观。
+     * 刻意不用 Map.of(...)，唯一的原因是：Map.of 不接受 null 值，传了 null 会抛 NPE。
+     * 排查时容易误以为是 Map 的问题，其实是"某个值没取到"——用 HashMap 的话，
+     * null 会被照常放进去，问题更直观。
+     * （"Java 9+ 的 API 不能用"曾经也是理由之一，但项目已迁到 Java 17，这条已不成立。）
      */
     private static Map<String, Object> body(Object... keyValues) {
         Map<String, Object> map = new HashMap<>();
@@ -770,7 +769,7 @@ class OrderServiceUserTest {
     private List<Long> orderIdsOf(JSONObject response) {
         JSONArray records = response.getJSONObject("data").getJSONArray("records");
         if (records == null) {
-            // 不能用 List.of()：同样是 Java 9+ 的 API
+            // 空分页：返回空列表（Java 17 下 List.of() 也可以用，这里保留历史写法）
             return Collections.emptyList();
         }
         return records.stream()

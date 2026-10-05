@@ -18,16 +18,16 @@
 
 | | |
 |---|---|
-| 语言 / 框架 | Java 8+（本地用 JDK 21 跑通）、Spring Boot 2.7.3 |
-| 持久层 | MyBatis 2.2.0 + PageHelper、MySQL 8、Druid 连接池 |
+| 语言 / 框架 | Java 17+（编译目标 17；用本机 JDK 21 编译，运行时 17 / 21 都能跑）、Spring Boot 3.5.11 |
+| 持久层 | MyBatis 3.0.5 + PageHelper 2.1.1、MySQL 8（Connector/J 9.5.0）、Druid 1.2.24（`druid-spring-boot-3-starter`） |
 | 缓存 | Redis（Lettuce），存店铺营业状态 |
 | 认证 | JWT（jjwt 0.9.1）+ 一个拦截器按路径前缀校验角色 |
-| 接口文档 | Knife4j 3.0.2 / springfox 3.0.0 |
+| 接口文档 | Knife4j 4.5.0（OpenAPI3 / jakarta 内核）+ springdoc 2.8.13 |
 | 其它 | WebSocket（来单提醒、客户催单）、POI（运营数据导出） |
 
-> ⚠️ pom 里声明的 `java.version` 是 **1.8**，而 Maven 用的是 `-source/-target 1.8`（不是 `--release`）。
-> 结果是 `Map.of` / `List.of` / `var` 这些 **Java 9+ 的 API 能编译过，但会破坏 1.8 兼容性**（IDE 按语言级别 1.8 会直接报错）。
-> 本项目里一律不用它们。
+> 项目已迁到 **Java 17**（`<java.version>17</java.version>`，编译目标 17；用本机 JDK 21 编译，产物在 17 / 21 上都能跑），
+> `Map.of` / `List.of` / `var` 这些 Java 9+ 的 API 都可以正常使用。
+> 例外只有测试里的 `body(...)` 工具方法：它用 `HashMap` 而不用 `Map.of` —— 理由是 **`Map.of` 不接受 null 值**，传 null 会抛 NPE，排查时容易误以为是"某个值没取到"。
 
 ## 模块结构
 
@@ -44,7 +44,7 @@
 
 ### 1. 环境
 
-- JDK 8 以上、Maven 3.6+
+- JDK 17 以上（编译目标 17）、Maven 3.6+
 - MySQL 8（库名 `sky_take_out`）
 - Redis（默认 6379）
 

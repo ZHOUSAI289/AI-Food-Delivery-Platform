@@ -14,7 +14,9 @@
 - **`jjwt` 保持 0.9.1 不动**，连同 `jaxb-api` 2.3.1 一起保留 —— 它已在 JDK 21 上实测跑通（三端登录一路验证过），**本次迁移不碰它**。升 0.12 是独立任务（API 全变，18 处调用点）。
 - **`fastjson` 1.2.76 不动**（测试里大量使用，不依赖 javax）。
 - **配置里的 key 一律不进 `application.yml`**（仓库是公开的）：LLM key 等以后放 `application-dev.yml` / 环境变量。
-- **每个任务一个 commit**，commit 前必须 `mvn -o test` 全绿（Task 1 例外，见它的验收标准）。
+- **每个任务一个 commit**，commit 前必须测试全绿（Task 1 例外，见它的验收标准）。
+- **跑测试一律限定类名**：`mvn -o test -Dtest='OrderServiceUserTest,RiderServiceTest,EmployeeServiceTest,OrderDataGuardTest,OrderTaskTest' -DfailIfNoTests=false`。
+  不要用裸 `mvn test` —— 它会把 `src/test/java/com/sky/set/` 下三个**依赖真实阿里云 OSS / 微信密钥**的样例测试也拉起来，固定 9 个 error，和本次迁移无关（实测：裸跑 = `Tests run: 60, Errors: 9`；限定类名 = `Tests run: 51, Failures: 0`）。
 - **不夹带功能改动**：迁移期间不改业务逻辑。遇到"顺手能改"的地方，记下来留到迁移后。
 
 ## 已知事实（执行前不必再查）
@@ -33,9 +35,10 @@
 ### Task 1: 编译能过（POM + javax→jakarta + Redis 配置前缀）
 
 **Files:**
-- Modify: `pom.xml`（parent 版本、`java.version`、4 个依赖版本）
-- Modify: `sky-server/pom.xml`（knife4j 依赖坐标暂不动，Task 2 处理）
-- Modify: 6 个 java 文件的 `javax.*` import
+- Modify: `pom.xml`（parent 版本、`java.version`、4 个依赖版本 + 新增 `mysql.connector` 属性）
+- Modify: `sky-server/pom.xml`（**MySQL 驱动换新坐标并显式给版本**；knife4j 坐标暂不动，Task 2 处理）
+- Modify: `sky-pojo/pom.xml`（**补 `jakarta.validation:jakarta.validation-api`，不写版本**；原因见 Step 4.5）
+- Modify: **7 个** java 文件的 `javax.*` import（明细见上面「已知事实」表）
 - Modify: `sky-server/src/main/resources/application.yml`（Redis 前缀）
 
 **Interfaces:**
@@ -45,7 +48,8 @@
 
 ```bash
 git checkout -b boot3-migration
-mvn -o test          # 记录：Tests run: 51+（本轮新增后应为 72），Failures: 0
+mvn -o clean test -Dtest='OrderServiceUserTest,RiderServiceTest,EmployeeServiceTest,OrderDataGuardTest,OrderTaskTest' -DfailIfNoTests=false
+# 记录基线：Tests run: 51, Failures: 0（注意：裸 mvn test 会多出 9 个 error，见"全局约束"）
 ```
 
 - [ ] **Step 2: 改父 POM**
@@ -68,6 +72,7 @@ mvn -o test          # 记录：Tests run: 51+（本轮新增后应为 72），F
     <mybatis.spring>3.0.5</mybatis.spring>   <!-- 2.2.0 → 3.0.5 -->
     <pagehelper>2.1.1</pagehelper>           <!-- 1.3.0 → 2.1.1（1.4.x 用的是 Boot 2 的 spring.factories，Boot 3 不再加载） -->
     <druid>1.2.24</druid>                    <!-- 1.2.1 → 1.2.24（1.2.20 起才支持 Boot 3） -->
+    <mysql.connector>9.5.0</mysql.connector> <!-- 新增：见 Step 3.5（Boot 3 换了 MySQL 驱动的 GAV） -->
     <!-- 其余保持不动：lombok 1.18.42 / fastjson 1.2.76 / jjwt 0.9.1 / poi 3.16 / httpclient 4.5.13 -->
 </properties>
 ```
@@ -84,7 +89,30 @@ grep -n "websocket" sky-server/pom.xml
 
 若只依赖 `spring-boot-starter-websocket` → **什么都不用加**（Boot 3.5 会自动带 tomcat-embed-websocket 10.1.x）。若显式写了 `javax.websocket:javax.websocket-api` → 删掉那一块。
 
-- [ ] **Step 4: `javax.*` → `jakarta.*`（7 个文件，17 处 import）**
+- [ ] **Step 3.5: MySQL 驱动换坐标（Boot 3 最经典的坑）**
+
+Boot 3.5 的 BOM **不再管理** `mysql:mysql-connector-java`，改管 `com.mysql:mysql-connector-j`。
+不换的话 POM 校验阶段就直接失败（连 Reactor 都进不去）：
+
+```
+[ERROR] 'dependencies.dependency.version' for mysql:mysql-connector-java:jar is missing. @ line 43, column 21
+```
+
+`sky-server/pom.xml`：
+
+```xml
+<!-- 旧：<groupId>mysql</groupId><artifactId>mysql-connector-java</artifactId>，版本靠 Boot 2.7 的 BOM -->
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>${mysql.connector}</version>   <!-- 9.5.0：本地仓库已缓存，离线也能构建 -->
+</dependency>
+```
+
+> 驱动类名不变（仍是 `com.mysql.cj.jdbc.Driver`），所以 `application-dev.yml` 不用改。
+> **显式写版本**（而不是交给 BOM 的 9.6.0，那个本地没缓存）有两个好处：离线可构建、符合本项目"版本都收在 properties 里"的风格。
+
+- [ ] **Step 4: `javax.*` → `jakarta.*`（7 个文件，16 处 import）**
 
 严格按这个对照表替换，**只改 import 行**：
 
@@ -106,6 +134,27 @@ grep -n "websocket" sky-server/pom.xml
 ```bash
 grep -rn "import javax\." sky-server/src sky-pojo/src sky-common/src
 ```
+
+- [ ] **Step 4.5: 补 `sky-pojo` 的校验 API 依赖（执行时才发现的缺口）**
+
+`sky-pojo` 自己**从未声明**校验 API：`OrdersCancelDTO` 的 `@NotBlank` 原先是从
+`knife4j-spring-boot-starter:3.0.2 → springfox-boot-starter:3.0.0 → io.swagger:swagger-core:1.5.22 → javax.validation:validation-api:2.0.1.Final`
+**传递**进来的（依赖树实测）。换成 jakarta 命名空间后这条路径断了 → `程序包 jakarta.validation.constraints 不存在`，`sky-pojo` 编译失败。
+
+`sky-pojo/pom.xml`：
+
+```xml
+<!-- 校验 API：迁移前由 springfox 传递提供，Boot 3 下这条路没了，改为显式声明。
+     只补 API，不要换成 spring-boot-starter-validation —— 那会带进 hibernate-validator，
+     而全仓没有任何 @Valid/@Validated 消费点，还会破坏离线构建。 -->
+<dependency>
+    <groupId>jakarta.validation</groupId>
+    <artifactId>jakarta.validation-api</artifactId>
+</dependency>
+```
+
+> 不写版本：Boot 3.5.11 的 BOM 已托管 `<jakarta-validation.version>3.0.2</jakarta-validation.version>`（实测解析为 3.0.2）。
+> Task 2 动这个 POM 时**不要删它**。
 
 - [ ] **Step 5: Redis 配置前缀（不改会静默失效）**
 
@@ -141,6 +190,10 @@ git commit -m "迁移: Spring Boot 2.7.3 -> 3.5.11、java 8 -> 17，javax -> jak
 ---
 
 ### Task 2: 应用能起、测试全绿（springfox → springdoc + Knife4j 4.x）
+
+> ⚠️ **两件事别忘**（Task 1 执行时发现的）：
+> 1. 本任务的 Files 也要含 **`sky-pojo/pom.xml`** —— 它第 22-25 行同样挂在老坐标 `knife4j-spring-boot-starter:3.0.2` 上，要一起换。
+> 2. **不要删掉 Task 1 补进去的 `jakarta.validation:jakarta.validation-api`** —— `OrdersCancelDTO` 的 `@NotBlank` 靠它编译。它是"以前从 springfox 传递进来、换命名空间后断掉"的依赖，删了就回到编译不过的状态。
 
 **Files:**
 - Modify: `pom.xml`（knife4j 坐标与版本）
@@ -296,19 +349,38 @@ grep -rn "io.swagger.annotations" sky-server/src
 grep -rn "@ApiOperation\|@Api(" sky-server/src
 ```
 
+- [ ] **Step 4.9: 执行时发现的 4 个缺口（已修复并验证，记录在此避免后人重踩）**
+
+| # | 缺口 | 症状 | 修法 |
+|---|---|---|---|
+| **G1** | `sky-pojo` 的 `EmployeeLoginDTO` / `EmployeeLoginVO` 还有 **12 处** springfox 注解（`@ApiModel` / `@ApiModelProperty`） | `程序包 io.swagger.annotations 不存在`，12 errors | `@ApiModel` → `@Schema`、`@ApiModelProperty` → `@Schema`（都在 `io.swagger.v3.oas.annotations.media`）。**清单原来是错的**：我的正则写成 `@Api\(`，只匹配了 `@Api(`，漏掉了 `@ApiModel*` |
+| **G2** | druid 的**坐标**（不只是版本）在 Boot 3 下变了 | Druid 自动配置不生效 → 退回 Hikari → `Failed to determine a suitable driver class`，起不来 | `druid-spring-boot-starter` → **`druid-spring-boot-3-starter`**（属性前缀不变）。旧 jar 里只有 `spring.factories`，没有 Boot 3 的 `AutoConfiguration.imports` |
+| **G3** | knife4j 4.5.0 传递进来的 **springdoc 2.3.0** 与 Spring 6.2 / Boot 3.5 不兼容 | `/v3/api-docs/{分组}` 500：`NoSuchMethodError: ControllerAdviceBean.<init>(Object)` | 根 pom 用 **`springdoc-openapi-bom` 2.8.13** 覆盖传递版本（4.5.0 已是 4.x 最新，4.5.1/4.6.x 镜像上不存在） |
+| **G4** | springdoc 的 `/v3/api-docs` 返回 `byte[]`，被本项目的 `extendMessageConverters`（把 Jackson 插到 0 号位）序列化成了 **base64** | 接口文档界面拿到 `"eyJvcGVuYXBp…"`，初始化失败 | 补 `ByteArrayHttpMessageConverter`（官方 FAQ / springdoc#2143） |
+
+**工具链注意**（与本项目有关，不属于迁移缺陷）：
+- surefire 3.x 要加 `-Dsurefire.failIfNoSpecifiedTests=false`；**且 PowerShell 里必须加引号**，否则会被拆成两个参数（Maven 报 `Unknown lifecycle phase ".failIfNoSpecifiedTests=false"`）。
+- 沙箱以低完整性级别运行时，Mockito 内联 mock maker 的 self-attach 会失败（`Could not self-attach to current VM`）；以更宽权限跑就没有这个问题。
+
 - [ ] **Step 5: 验收（测试 + 启动 + 文档）**
 
 ```bash
-mvn -o clean test
+mvn -o clean test -Dtest='OrderServiceUserTest,RiderServiceTest,EmployeeServiceTest,OrderDataGuardTest,OrderTaskTest' -DfailIfNoTests=false
 ```
 
 Expected：**所有测试类全绿，共 51 个用例**：`OrderServiceUserTest` 26、`RiderServiceTest` 13、`EmployeeServiceTest` 4、`OrderDataGuardTest` 4、`OrderTaskTest` 4。（`sky-server/src/test/java/com/sky/set/` 下那几个依赖真实 OSS/微信密钥的样例测试已被 `.gitignore` 排除，不参与。）
 
 ```bash
 java -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar --server.port=8081
-curl -s -o NUL -w "%{http_code}\n" http://localhost:8081/doc.html          # 期望 200
-curl -s "http://localhost:8081/v3/api-docs/swagger-config"                  # 期望看到四个分组名
+curl -s -o NUL -w "%{http_code}\n" http://localhost:8081/doc.html
+curl -s -o NUL -w "%{http_code}\n" http://localhost:8081/v3/api-docs
+curl -s "http://localhost:8081/v3/api-docs/swagger-config"
 ```
+
+> ⚠️ **验收口径要按"每个文档端点都必须是 200 且返回 JSON"来判**，不能只看 `/doc.html` 是 200、
+> 也不能只看 swagger-config 里列出了四个组名 —— 这两条在 **`/v3/api-docs` 全部 500** 的情况下**照样通过**。
+> 这是实际踩到的坑（终审发现：`knife4j.enable=true` 时 4 个分组文档全 500，而上面两条"验收"都是绿的）。
+> 正确做法：`/v3/api-docs` 必须 200；四个分组逐个 GET（`/v3/api-docs/{分组名}`，**注意分组名是中文、要 URL 编码**）也必须 200。
 
 Expected：`swagger-config` 的 JSON 里包含 `管理端接口`、`用户端接口`、`骑手端接口`、`公共接口` 四个名字。
 

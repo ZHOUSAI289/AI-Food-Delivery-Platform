@@ -12,8 +12,8 @@ import com.sky.service.EmployeeService;
 import com.sky.utils.JwtUtil;
 import com.sky.vo.EmployeeLoginVO;
 import com.sky.vo.EmployeeVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/employee")
 @Slf4j
-@Api(tags = "员工相关接口")
+@Tag(name = "员工相关接口")
 public class EmployeeController {
 
     @Autowired
@@ -51,7 +51,7 @@ public class EmployeeController {
      * @return
      */
     // @PostMapping("/login")
-    // @ApiOperation(value = "员工登录")
+    // @Operation(summary = "员工登录")
     // public Result<EmployeeLoginVO> login(@RequestBody EmployeeLoginDTO employeeLoginDTO) {
     //     log.info("员工登录：{}", employeeLoginDTO);
     //
@@ -84,7 +84,7 @@ public class EmployeeController {
      * @return
      */
     @PostMapping("/logout")
-    @ApiOperation(value = "员工退出")
+    @Operation(summary = "员工退出")
     public Result<String> logout() {
         return Result.success();
     }
@@ -95,7 +95,7 @@ public class EmployeeController {
      * @return
      */
     @PostMapping
-    @ApiOperation(value = "新增员工")
+    @Operation(summary = "新增员工")
     public Result save(@RequestBody EmployeeDTO employeeDTO){
         log.info("新增员工：{}", employeeDTO);
         employeeService.save(employeeDTO);
@@ -108,7 +108,7 @@ public class EmployeeController {
      * @return
      */
     @GetMapping("/page")
-    @ApiOperation(value = "员工分页查询")
+    @Operation(summary = "员工分页查询")
     public Result<PageResult> page(EmployeePageQueryDTO employeePageQueryDTO){
         log.info("员工分页查询，参数：{}", employeePageQueryDTO);
         PageResult pageResult = employeeService.pageQuery(employeePageQueryDTO);
@@ -122,7 +122,7 @@ public class EmployeeController {
      * @return
      */
     @PostMapping("/status/{status}")
-    @ApiOperation(value = "启用禁用员工状态")
+    @Operation(summary = "启用禁用员工状态")
     public Result startOrStop(@PathVariable Integer status,Long id){
         log.info("启用禁用员工账号：{}，{}",status,id);// status是路径参数
         employeeService.startOrStop(status,id);
@@ -136,7 +136,7 @@ public class EmployeeController {
      * setPassword("****") 挡着 —— 那种写法一旦有人复制去写新接口就会漏。
      */
     @GetMapping("/{id}")
-    @ApiOperation(value = "根据id查询员工信息")
+    @Operation(summary = "根据id查询员工信息")
     public Result<EmployeeVO> getById(@PathVariable Long id){
         log.info("根据id查询员工信息：{}",id);
         return Result.success(employeeService.getById(id));
@@ -148,7 +148,7 @@ public class EmployeeController {
      * @return
      */
     @PutMapping
-    @ApiOperation(value = "编辑员工信息")
+    @Operation(summary = "编辑员工信息")
     public Result update(@RequestBody EmployeeDTO employeeDTO){
         log.info("编辑员工信息：{}", employeeDTO);
         employeeService.update(employeeDTO);

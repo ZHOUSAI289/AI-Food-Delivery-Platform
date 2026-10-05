@@ -4,8 +4,8 @@ import com.sky.dto.LoginDTO;
 import com.sky.result.Result;
 import com.sky.service.LoginService;
 import com.sky.vo.LoginVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/login")
-@Api(tags = "统一登录接口")
+@Tag(name = "统一登录接口")
 @Slf4j
 public class LoginController {
 
@@ -38,7 +38,7 @@ public class LoginController {
      * @return id、姓名、账号、角色、token
      */
     @PostMapping
-    @ApiOperation("三端统一登录")
+    @Operation(summary = "三端统一登录")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
         log.info("统一登录，账号：{}", loginDTO.getUsername());
         return Result.success(loginService.login(loginDTO));

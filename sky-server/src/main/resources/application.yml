@@ -12,11 +12,14 @@ spring:
       url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: ${sky.datasource.username}
       password: ${sky.datasource.password}
-  redis:
-    host: ${sky.redis.host}
-    port: ${sky.redis.port}
-    password: ${sky.redis.password}
-    database: ${sky.redis.database} #数据库索引
+  # Boot 3 起 Redis 的配置前缀从 spring.redis 改成了 spring.data.redis。
+  # 不改的话这段配置【不会报错、也不会生效】—— 表现为店铺营业状态读不到、缓存全是新建的。
+  data:
+    redis:
+      host: ${sky.redis.host}
+      port: ${sky.redis.port}
+      password: ${sky.redis.password}
+      database: ${sky.redis.database} # 数据库索引
 
 mybatis:
   #mapper配置文件
@@ -65,3 +68,16 @@ sky:
     access-key-id: ${sky.alioss.access-key-id}
     access-key-secret: ${sky.alioss.access-key-secret}
     bucket-name: ${sky.alioss.bucket-name}
+
+# Knife4j 4.x 的增强模式在这里【必须关掉】—— 这是实测结论，不是图省事：
+# 1) Knife4j 4.5.0 传递进来的是 springdoc 2.3.0，与 Spring 6.2 / Boot 3.5 不兼容
+#    （NoSuchMethodError: ControllerAdviceBean.<init>），所以根 pom 用 springdoc-openapi-bom 覆盖到 2.8.13；
+# 2) 但 Knife4j 自己的 Knife4jOpenApiCustomizer 又按老签名调 SpringDocConfigProperties.getGroupConfigs()
+#    （springdoc 2.7 起返回类型从 List 变成 Set）→ enable=true 时 /v3/api-docs 与四个分组文档【全部 500】，
+#    而 /doc.html 与 swagger-config 仍是 200，极容易被误判成"文档正常"。
+# enable=false 时：/doc.html 正常，/v3/api-docs 与四个分组全部 200（纯 JSON），代价是少了 Knife4j 的界面增强。
+knife4j:
+  enable: false
+  setting:
+    # 界面语言：可选值 zh_cn / en_us（对应 knife4j 的 OpenAPILanguageEnums）
+    language: zh_cn

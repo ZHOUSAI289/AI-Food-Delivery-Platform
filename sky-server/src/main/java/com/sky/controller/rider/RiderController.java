@@ -3,8 +3,8 @@ package com.sky.controller.rider;
 import com.sky.result.Result;
 import com.sky.service.RiderService;
 import com.sky.vo.RiderVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Slf4j
 @RequestMapping("/rider")
-@Api(tags = "骑手端账号接口")
+@Tag(name = "骑手端账号接口")
 public class RiderController {
 
     @Autowired
@@ -53,7 +53,7 @@ public class RiderController {
      * @param status 1 上线 / 0 离线
      */
     @PutMapping("/status/{status}")
-    @ApiOperation("骑手上线/下线")
+    @Operation(summary = "骑手上线/下线")
     public Result switchOnline(@PathVariable Integer status){
         log.info("骑手上线/下线：status={}", status);
         riderService.switchOnline(status);
@@ -67,7 +67,7 @@ public class RiderController {
      * 返回里没有 password（RiderVO 从类型上就没有这个字段）。
      */
     @GetMapping("/me")
-    @ApiOperation("当前骑手信息")
+    @Operation(summary = "当前骑手信息")
     public Result<RiderVO> currentRider(){
         return Result.success(riderService.currentRider());
     }
