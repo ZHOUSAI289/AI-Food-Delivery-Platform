@@ -372,9 +372,15 @@ Expected：**所有测试类全绿，共 51 个用例**：`OrderServiceUserTest`
 
 ```bash
 java -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar --server.port=8081
-curl -s -o NUL -w "%{http_code}\n" http://localhost:8081/doc.html          # 期望 200
-curl -s "http://localhost:8081/v3/api-docs/swagger-config"                  # 期望看到四个分组名
+curl -s -o NUL -w "%{http_code}\n" http://localhost:8081/doc.html
+curl -s -o NUL -w "%{http_code}\n" http://localhost:8081/v3/api-docs
+curl -s "http://localhost:8081/v3/api-docs/swagger-config"
 ```
+
+> ⚠️ **验收口径要按"每个文档端点都必须是 200 且返回 JSON"来判**，不能只看 `/doc.html` 是 200、
+> 也不能只看 swagger-config 里列出了四个组名 —— 这两条在 **`/v3/api-docs` 全部 500** 的情况下**照样通过**。
+> 这是实际踩到的坑（终审发现：`knife4j.enable=true` 时 4 个分组文档全 500，而上面两条"验收"都是绿的）。
+> 正确做法：`/v3/api-docs` 必须 200；四个分组逐个 GET（`/v3/api-docs/{分组名}`，**注意分组名是中文、要 URL 编码**）也必须 200。
 
 Expected：`swagger-config` 的 JSON 里包含 `管理端接口`、`用户端接口`、`骑手端接口`、`公共接口` 四个名字。
 
