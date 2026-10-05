@@ -40,9 +40,13 @@
             <scope>compile</scope>
         </dependency>
 
+        <!-- Boot 3.5 的 BOM 不再管理 mysql:mysql-connector-java，改管 com.mysql:mysql-connector-j。
+             版本显式引用根 pom 的 ${mysql.connector}（9.5.0，本地仓库已缓存，离线可构建）。
+             驱动类名不变（com.mysql.cj.jdbc.Driver），配置文件无需调整。 -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql.connector}</version>
             <scope>runtime</scope>
         </dependency>
 
