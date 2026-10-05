@@ -132,7 +132,25 @@ public interface OrderMapper {
      */
     int updateStatus(Orders orders);
 
-    @Update("update orders set status = 6, cancel_reason = #{cancelReason}, cancel_time = now() where id = #{id} and status in (1, 2)")
+    /**
+     * 用户取消订单（CAS）：只有订单此刻仍然是 1 待付款 / 2 待接单 时才改成 6 已取消。
+     *
+     * ⚠️ where 里为什么必须带 pay_status
+     * "要不要退款"是调用方按【读到的快照】里的 pay_status 决定的（见 OrderSupport.refundIfNeeded）。
+     * 如果这里不判支付状态，就会出现这条交错：读完（未支付）→ 用户付款成功 →
+     * CAS 仍然成功（status 还在 1/2 里）→ 订单被取消、钱已经收了、而且【不会退】
+     * —— 账面上是"已取消 + 已支付"，对账都发现不了。
+     *
+     * 把快照里的 pay_status 写进 where 之后，这种交错会让 CAS 影响 0 行，
+     * 调用方据此报"订单状态错误"；用户重试时会重新读到"已支付"，才会走退款。
+     *
+     * 这和 updateTimeoutCancel（超时取消）是同一条原则：读-判断-写三步里，
+     * 判断的依据必须一起写进 where，否则中间那个窗口迟早会咬人。
+     *
+     * @return 影响行数；0 = 状态已变 / 支付状态已变 / 订单不存在
+     */
+    @Update("update orders set status = 6, cancel_reason = #{cancelReason}, cancel_time = now() " +
+            "where id = #{id} and status in (1, 2) and pay_status = #{payStatus}")
     int updateUserStatus(Orders orders);
 
     /**

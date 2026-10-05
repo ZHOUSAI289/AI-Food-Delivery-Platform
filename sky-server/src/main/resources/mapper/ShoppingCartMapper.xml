@@ -3,13 +3,25 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.sky.mapper.ShoppingCartMapper">
 
+    <!--
+      按条件查购物车行。
+
+      【user_id 为什么必须是无条件的第一项，不能放进 <if>】
+      这个方法有四个调用方（加购、减一、查看购物车、下单时取购物车），
+      每一处都只有一个用户视角。原来的写法是四个条件【全是可选】的 <if>，
+      于是任何一处漏设字段都会让 SQL 退化成 `select * from shopping_cart` ——
+      一个 WHERE 都没有，把【所有人】的购物车行查出来（实测就是这样）。
+      调用方再 list.get(0) 拿一条去改，改的就是别人的购物车。
+
+      Service 层现在有 requireGoodsId 兜着，但那是第一道防线：
+      权限/归属条件在 SQL 这层不能是可选的。
+      菜品、套餐、口味才是真正的业务筛选，继续留在 <if> 里。
+    -->
     <select id="list" resultType="com.sky.entity.ShoppingCart">
         select * from shopping_cart
-        <where>
-            <if test="userId != null"> and user_id = #{userId}</if>
-            <if test="setmealId != null"> and setmeal_id = #{setmealId}</if>
-            <if test="dishId != null"> and dish_id = #{dishId}</if>
-            <if test="dishFlavor != null"> and dish_flavor = #{dishFlavor}</if>
-        </where>
+        where user_id = #{userId}
+        <if test="setmealId != null"> and setmeal_id = #{setmealId}</if>
+        <if test="dishId != null"> and dish_id = #{dishId}</if>
+        <if test="dishFlavor != null"> and dish_flavor = #{dishFlavor}</if>
     </select>
 </mapper>

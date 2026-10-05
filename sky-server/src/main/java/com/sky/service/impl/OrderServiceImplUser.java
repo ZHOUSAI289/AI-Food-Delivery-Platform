@@ -327,6 +327,11 @@ public class OrderServiceImplUser implements OrderServiceUser {
                     .status(CANCELLED)
                     .cancelReason("用户主动取消")
                     .cancelTime(LocalDateTime.now())
+                    // ⚠️ 必须把【快照里的支付状态】一起交给 CAS。
+                    // 上面那句 refundIfNeeded 正是按它决定要不要退款的：漏了它，
+                    // "读完 → 用户付款成功 → 取消成功"这条交错会让订单被取消却不退款
+                    // （钱收了、单没了、账上还显示已支付）。
+                    .payStatus(orders.getPayStatus())
                     .build();
             if (orderMapper.updateUserStatus(updateOrder) == 0) {
                 orderSupport.throwCasFailure(orders.getId());

@@ -5,6 +5,7 @@ import com.sky.annotation.AutoFill;
 import com.sky.dto.EmployeePageQueryDTO;
 import com.sky.entity.Employee;
 import com.sky.enumeration.OperationType;
+import com.sky.vo.EmployeeVO;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -32,10 +33,15 @@ public interface EmployeeMapper {
 
     /**
      * 分页查询
+     *
+     * 返回 EmployeeVO 而不是 Employee：后者带着 password（MD5），
+     * 直接返回实体就等于把密码发给前端（这条路径原来就是这么漏的）。
+     * SQL 在 EmployeeMapper.xml 里（显式列名，不用 select *）。
+     *
      * @param employeePageQueryDTO
      * @return
      */
-    Page<Employee> pageQuery(EmployeePageQueryDTO employeePageQueryDTO);
+    Page<EmployeeVO> pageQuery(EmployeePageQueryDTO employeePageQueryDTO);
 
     /**
      * 根据主键动态修改属性

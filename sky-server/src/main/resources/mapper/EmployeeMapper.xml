@@ -2,11 +2,27 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.sky.mapper.EmployeeMapper">
-    <select id="pageQuery" resultType="com.sky.entity.Employee">
-        select * from employee
+    <!--
+      员工分页查询。
+
+      【为什么是"显式列名 + EmployeeVO"，而不是 select * 出实体】
+      employee 表上有 password（MD5）。返回实体就等于把密码发给了前端 ——
+      这个接口实测响应里带着真实的哈希值。用 VO 是从【类型层面】排除敏感字段，
+      比"记得在某个地方 setNull"可靠：同一个类的 getById 就是靠 setPassword("****")
+      挡的，而这条分页路径谁也没记得。
+      显式列名还保证以后给 employee 加敏感列时不会自动跟着返回。
+
+      【concat 不是 contact】
+      这里原来是 contact('%', #{name}, '%')，而 MySQL 里没有 contact 这个函数 ——
+      一带 name 参数就报 ERROR 1305，接口直接 500。
+      也就是说"按姓名搜索"这条最常见的路径，从来没能跑通过。
+    -->
+    <select id="pageQuery" resultType="com.sky.vo.EmployeeVO">
+        select id, username, name, phone, sex, id_number, status, create_time, update_time
+        from employee
         <where>
             <if test="name != null and name != ''">
-                and name like contact('%',#{name},'%')
+                and name like concat('%', #{name}, '%')
             </if>
         </where>
         order by create_time desc

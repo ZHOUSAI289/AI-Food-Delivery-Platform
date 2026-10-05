@@ -15,6 +15,7 @@ import com.sky.exception.PasswordErrorException;
 import com.sky.mapper.EmployeeMapper;
 import com.sky.result.PageResult;
 import com.sky.service.EmployeeService;
+import com.sky.vo.EmployeeVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -102,10 +103,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         // 开始分页查询(参数含义：当前页数，记录数)
         PageHelper.startPage(employeePageQueryDTO.getPage(), employeePageQueryDTO.getPageSize());
 
-        Page<Employee> page = employeeMapper.pageQuery(employeePageQueryDTO);
+        // 查出来的是 EmployeeVO：这个类型上就没有 password，
+        // 所以"记得别把密码发出去"这件事不再依赖任何人的自觉（见 EmployeeMapper.pageQuery）
+        Page<EmployeeVO> page = employeeMapper.pageQuery(employeePageQueryDTO);
 
         long total = page.getTotal(); //总记录数
-        List<Employee> records = page.getResult(); // 当前页数据集合
+        List<EmployeeVO> records = page.getResult(); // 当前页数据集合
         return new PageResult(total, records);
     }
 
@@ -135,10 +138,18 @@ public class EmployeeServiceImpl implements EmployeeService {
      * @param id
      * @return
      */
-    public Employee getById(Long id) {
+    public EmployeeVO getById(Long id) {
         Employee employee = employeeMapper.getById(id);
-        employee.setPassword("****");
-        return employee;
+        if (employee == null) {
+            return null;
+        }
+        // 拷进 VO，而不是把实体的 password 改成 "****"：
+        // VO 里根本没有这个属性，所以不存在"忘了改"的可能。
+        // 原来的写法（setPassword("****")）看着也没漏，但它创造了一个"带着密码的实体
+        // 正在被返回"的状态 —— 谁复制这段代码去写新接口，就会把真实的哈希带出去。
+        EmployeeVO employeeVO = new EmployeeVO();
+        BeanUtils.copyProperties(employee, employeeVO);
+        return employeeVO;
     }
 
     /**

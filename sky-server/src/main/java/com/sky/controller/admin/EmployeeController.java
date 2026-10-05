@@ -11,6 +11,7 @@ import com.sky.result.Result;
 import com.sky.service.EmployeeService;
 import com.sky.utils.JwtUtil;
 import com.sky.vo.EmployeeLoginVO;
+import com.sky.vo.EmployeeVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -130,15 +131,15 @@ public class EmployeeController {
 
     /**
      * 根据id查询员工信息
-     * @param id
-     * @return
+     *
+     * 返回 EmployeeVO（不含 password）。原来返回的是 Employee 实体，靠 Service 里
+     * setPassword("****") 挡着 —— 那种写法一旦有人复制去写新接口就会漏。
      */
     @GetMapping("/{id}")
     @ApiOperation(value = "根据id查询员工信息")
-    public Result<Employee> getById(@PathVariable Long id){
+    public Result<EmployeeVO> getById(@PathVariable Long id){
         log.info("根据id查询员工信息：{}",id);
-        Employee employee = employeeService.getById(id);
-        return Result.success(employee);
+        return Result.success(employeeService.getById(id));
     }
 
     /**

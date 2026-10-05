@@ -5,6 +5,7 @@ import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
 import com.sky.entity.Employee;
 import com.sky.result.PageResult;
+import com.sky.vo.EmployeeVO;
 
 public interface EmployeeService {
 
@@ -37,10 +38,11 @@ public interface EmployeeService {
 
     /**
      * 根据id查询员工信息
+     * 返回 EmployeeVO（不含 password）
      * @param id
      * @return
      */
-    Employee getById(Long id);
+    EmployeeVO getById(Long id);
 
     /**
      * 编辑员工信息
