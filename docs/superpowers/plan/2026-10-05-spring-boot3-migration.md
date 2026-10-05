@@ -37,7 +37,8 @@
 **Files:**
 - Modify: `pom.xml`（parent 版本、`java.version`、4 个依赖版本 + 新增 `mysql.connector` 属性）
 - Modify: `sky-server/pom.xml`（**MySQL 驱动换新坐标并显式给版本**；knife4j 坐标暂不动，Task 2 处理）
-- Modify: 6 个 java 文件的 `javax.*` import
+- Modify: `sky-pojo/pom.xml`（**补 `jakarta.validation:jakarta.validation-api`，不写版本**；原因见 Step 4.5）
+- Modify: **7 个** java 文件的 `javax.*` import（明细见上面「已知事实」表）
 - Modify: `sky-server/src/main/resources/application.yml`（Redis 前缀）
 
 **Interfaces:**
@@ -134,6 +135,27 @@ Boot 3.5 的 BOM **不再管理** `mysql:mysql-connector-java`，改管 `com.mys
 grep -rn "import javax\." sky-server/src sky-pojo/src sky-common/src
 ```
 
+- [ ] **Step 4.5: 补 `sky-pojo` 的校验 API 依赖（执行时才发现的缺口）**
+
+`sky-pojo` 自己**从未声明**校验 API：`OrdersCancelDTO` 的 `@NotBlank` 原先是从
+`knife4j-spring-boot-starter:3.0.2 → springfox-boot-starter:3.0.0 → io.swagger:swagger-core:1.5.22 → javax.validation:validation-api:2.0.1.Final`
+**传递**进来的（依赖树实测）。换成 jakarta 命名空间后这条路径断了 → `程序包 jakarta.validation.constraints 不存在`，`sky-pojo` 编译失败。
+
+`sky-pojo/pom.xml`：
+
+```xml
+<!-- 校验 API：迁移前由 springfox 传递提供，Boot 3 下这条路没了，改为显式声明。
+     只补 API，不要换成 spring-boot-starter-validation —— 那会带进 hibernate-validator，
+     而全仓没有任何 @Valid/@Validated 消费点，还会破坏离线构建。 -->
+<dependency>
+    <groupId>jakarta.validation</groupId>
+    <artifactId>jakarta.validation-api</artifactId>
+</dependency>
+```
+
+> 不写版本：Boot 3.5.11 的 BOM 已托管 `<jakarta-validation.version>3.0.2</jakarta-validation.version>`（实测解析为 3.0.2）。
+> Task 2 动这个 POM 时**不要删它**。
+
 - [ ] **Step 5: Redis 配置前缀（不改会静默失效）**
 
 `sky-server/src/main/resources/application.yml`：
@@ -168,6 +190,10 @@ git commit -m "迁移: Spring Boot 2.7.3 -> 3.5.11、java 8 -> 17，javax -> jak
 ---
 
 ### Task 2: 应用能起、测试全绿（springfox → springdoc + Knife4j 4.x）
+
+> ⚠️ **两件事别忘**（Task 1 执行时发现的）：
+> 1. 本任务的 Files 也要含 **`sky-pojo/pom.xml`** —— 它第 22-25 行同样挂在老坐标 `knife4j-spring-boot-starter:3.0.2` 上，要一起换。
+> 2. **不要删掉 Task 1 补进去的 `jakarta.validation:jakarta.validation-api`** —— `OrdersCancelDTO` 的 `@NotBlank` 靠它编译。它是"以前从 springfox 传递进来、换命名空间后断掉"的依赖，删了就回到编译不过的状态。
 
 **Files:**
 - Modify: `pom.xml`（knife4j 坐标与版本）
