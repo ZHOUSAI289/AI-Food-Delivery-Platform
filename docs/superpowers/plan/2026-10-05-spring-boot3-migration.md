@@ -14,7 +14,9 @@
 - **`jjwt` 保持 0.9.1 不动**，连同 `jaxb-api` 2.3.1 一起保留 —— 它已在 JDK 21 上实测跑通（三端登录一路验证过），**本次迁移不碰它**。升 0.12 是独立任务（API 全变，18 处调用点）。
 - **`fastjson` 1.2.76 不动**（测试里大量使用，不依赖 javax）。
 - **配置里的 key 一律不进 `application.yml`**（仓库是公开的）：LLM key 等以后放 `application-dev.yml` / 环境变量。
-- **每个任务一个 commit**，commit 前必须 `mvn -o test` 全绿（Task 1 例外，见它的验收标准）。
+- **每个任务一个 commit**，commit 前必须测试全绿（Task 1 例外，见它的验收标准）。
+- **跑测试一律限定类名**：`mvn -o test -Dtest='OrderServiceUserTest,RiderServiceTest,EmployeeServiceTest,OrderDataGuardTest,OrderTaskTest' -DfailIfNoTests=false`。
+  不要用裸 `mvn test` —— 它会把 `src/test/java/com/sky/set/` 下三个**依赖真实阿里云 OSS / 微信密钥**的样例测试也拉起来，固定 9 个 error，和本次迁移无关（实测：裸跑 = `Tests run: 60, Errors: 9`；限定类名 = `Tests run: 51, Failures: 0`）。
 - **不夹带功能改动**：迁移期间不改业务逻辑。遇到"顺手能改"的地方，记下来留到迁移后。
 
 ## 已知事实（执行前不必再查）
@@ -33,8 +35,8 @@
 ### Task 1: 编译能过（POM + javax→jakarta + Redis 配置前缀）
 
 **Files:**
-- Modify: `pom.xml`（parent 版本、`java.version`、4 个依赖版本）
-- Modify: `sky-server/pom.xml`（knife4j 依赖坐标暂不动，Task 2 处理）
+- Modify: `pom.xml`（parent 版本、`java.version`、4 个依赖版本 + 新增 `mysql.connector` 属性）
+- Modify: `sky-server/pom.xml`（**MySQL 驱动换新坐标并显式给版本**；knife4j 坐标暂不动，Task 2 处理）
 - Modify: 6 个 java 文件的 `javax.*` import
 - Modify: `sky-server/src/main/resources/application.yml`（Redis 前缀）
 
@@ -45,7 +47,8 @@
 
 ```bash
 git checkout -b boot3-migration
-mvn -o test          # 记录：Tests run: 51+（本轮新增后应为 72），Failures: 0
+mvn -o clean test -Dtest='OrderServiceUserTest,RiderServiceTest,EmployeeServiceTest,OrderDataGuardTest,OrderTaskTest' -DfailIfNoTests=false
+# 记录基线：Tests run: 51, Failures: 0（注意：裸 mvn test 会多出 9 个 error，见"全局约束"）
 ```
 
 - [ ] **Step 2: 改父 POM**
@@ -68,6 +71,7 @@ mvn -o test          # 记录：Tests run: 51+（本轮新增后应为 72），F
     <mybatis.spring>3.0.5</mybatis.spring>   <!-- 2.2.0 → 3.0.5 -->
     <pagehelper>2.1.1</pagehelper>           <!-- 1.3.0 → 2.1.1（1.4.x 用的是 Boot 2 的 spring.factories，Boot 3 不再加载） -->
     <druid>1.2.24</druid>                    <!-- 1.2.1 → 1.2.24（1.2.20 起才支持 Boot 3） -->
+    <mysql.connector>9.5.0</mysql.connector> <!-- 新增：见 Step 3.5（Boot 3 换了 MySQL 驱动的 GAV） -->
     <!-- 其余保持不动：lombok 1.18.42 / fastjson 1.2.76 / jjwt 0.9.1 / poi 3.16 / httpclient 4.5.13 -->
 </properties>
 ```
@@ -84,7 +88,30 @@ grep -n "websocket" sky-server/pom.xml
 
 若只依赖 `spring-boot-starter-websocket` → **什么都不用加**（Boot 3.5 会自动带 tomcat-embed-websocket 10.1.x）。若显式写了 `javax.websocket:javax.websocket-api` → 删掉那一块。
 
-- [ ] **Step 4: `javax.*` → `jakarta.*`（7 个文件，17 处 import）**
+- [ ] **Step 3.5: MySQL 驱动换坐标（Boot 3 最经典的坑）**
+
+Boot 3.5 的 BOM **不再管理** `mysql:mysql-connector-java`，改管 `com.mysql:mysql-connector-j`。
+不换的话 POM 校验阶段就直接失败（连 Reactor 都进不去）：
+
+```
+[ERROR] 'dependencies.dependency.version' for mysql:mysql-connector-java:jar is missing. @ line 43, column 21
+```
+
+`sky-server/pom.xml`：
+
+```xml
+<!-- 旧：<groupId>mysql</groupId><artifactId>mysql-connector-java</artifactId>，版本靠 Boot 2.7 的 BOM -->
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>${mysql.connector}</version>   <!-- 9.5.0：本地仓库已缓存，离线也能构建 -->
+</dependency>
+```
+
+> 驱动类名不变（仍是 `com.mysql.cj.jdbc.Driver`），所以 `application-dev.yml` 不用改。
+> **显式写版本**（而不是交给 BOM 的 9.6.0，那个本地没缓存）有两个好处：离线可构建、符合本项目"版本都收在 properties 里"的风格。
+
+- [ ] **Step 4: `javax.*` → `jakarta.*`（7 个文件，16 处 import）**
 
 严格按这个对照表替换，**只改 import 行**：
 
@@ -299,7 +326,7 @@ grep -rn "@ApiOperation\|@Api(" sky-server/src
 - [ ] **Step 5: 验收（测试 + 启动 + 文档）**
 
 ```bash
-mvn -o clean test
+mvn -o clean test -Dtest='OrderServiceUserTest,RiderServiceTest,EmployeeServiceTest,OrderDataGuardTest,OrderTaskTest' -DfailIfNoTests=false
 ```
 
 Expected：**所有测试类全绿，共 51 个用例**：`OrderServiceUserTest` 26、`RiderServiceTest` 13、`EmployeeServiceTest` 4、`OrderDataGuardTest` 4、`OrderTaskTest` 4。（`sky-server/src/test/java/com/sky/set/` 下那几个依赖真实 OSS/微信密钥的样例测试已被 `.gitignore` 排除，不参与。）
