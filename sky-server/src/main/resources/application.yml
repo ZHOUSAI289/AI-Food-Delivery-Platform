@@ -69,9 +69,15 @@ sky:
     access-key-secret: ${sky.alioss.access-key-secret}
     bucket-name: ${sky.alioss.bucket-name}
 
-# Knife4j 4.x（springdoc 内核）需要显式开启增强模式，否则 /doc.html 只是个空壳。
+# Knife4j 4.x 的增强模式在这里【必须关掉】—— 这是实测结论，不是图省事：
+# 1) Knife4j 4.5.0 传递进来的是 springdoc 2.3.0，与 Spring 6.2 / Boot 3.5 不兼容
+#    （NoSuchMethodError: ControllerAdviceBean.<init>），所以根 pom 用 springdoc-openapi-bom 覆盖到 2.8.13；
+# 2) 但 Knife4j 自己的 Knife4jOpenApiCustomizer 又按老签名调 SpringDocConfigProperties.getGroupConfigs()
+#    （springdoc 2.7 起返回类型从 List 变成 Set）→ enable=true 时 /v3/api-docs 与四个分组文档【全部 500】，
+#    而 /doc.html 与 swagger-config 仍是 200，极容易被误判成"文档正常"。
+# enable=false 时：/doc.html 正常，/v3/api-docs 与四个分组全部 200（纯 JSON），代价是少了 Knife4j 的界面增强。
 knife4j:
-  enable: true
+  enable: false
   setting:
     # 界面语言：可选值 zh_cn / en_us（对应 knife4j 的 OpenAPILanguageEnums）
     language: zh_cn

@@ -145,8 +145,11 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         Converter.setObjectMapper(new JacksonObjectMapper());
         //将上面的消息转换器对象追加到mvc框架的转换器集合中
         converters.add(0,Converter); //参数：索引(索引0表示排在转换器的第一位，优先使用的)，追加的位置
-        //仅诊断用：springdoc 的 /v3/api-docs 返回 byte[]，自定义 Jackson 转换器排在第 0 位会把它
-        //序列化成 base64 字符串，Knife4j 界面因此初始化失败（官方 FAQ / springdoc issue 2143）。
+        // springdoc 的 /v3/api-docs 返回的是 byte[]，而上面那个自定义 Jackson 转换器被插到了第 0 位，
+        // 会把它序列化成 base64 字符串（接口文档界面因此初始化失败）。这里把字节数组转换器也插到最前面，
+        // byte[] 响应体就走原样字节了（官方 FAQ / springdoc issue 2143）。
+        // ⚠️ 这是【全局】行为改动：所有返回 byte[] 的接口都从 base64 变成原样字节。
+        //    当前全仓没有别的 byte[] 返回体，但将来新增这类接口时要记得这条链路被改过。
         converters.add(0, new org.springframework.http.converter.ByteArrayHttpMessageConverter());
     }
 }
