@@ -42,3 +42,6 @@ sky-server/src/test/java/com/sky/set/
 # 想让它真的生效必须先 `git rm --cached`，那会同时删掉远程上的文件，谨慎操作。
 # 眼下这份里放的是课程示例凭据，所以选择"接受现状"；详见 README 的安全提醒。
 **/application-dev.yml
+
+# SDD（子代理驱动开发）的工作目录：任务简报、报告、进度台账 —— 都是本地产物
+.superpowers/
