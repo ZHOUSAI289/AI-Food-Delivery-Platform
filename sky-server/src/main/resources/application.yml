@@ -41,7 +41,17 @@ sky:
   jwt:
     # ===== 统一登录配置（三端共用）=====
     # 三端共用一个密钥、一个请求头 token，身份由 token 里的 role claim 区分
-    secret-key: sky-take-out-web
+    #
+    # 密钥的【值不写在这里】：application.yml 是进仓库的，而仓库是公开的 ——
+    # 把签名密钥写死在这里，等于把"签发合法 token 的能力"一起发布出去
+    # （拿到它的人可以自由伪造任意角色，包括 admin）。
+    # 真值放在 application-dev.yml，那个文件被 .gitignore 排除，不会进仓库。
+    # 写法和上面的 datasource / redis / wechat 完全一致：这里只留占位符。
+    # （profile 文件的优先级高于 application.yml，所以 ${} 能解析到 dev 里的那一份）
+    #
+    # 2026-10 轮换记录：旧值曾明文提交过、已经公开在 git 历史里，
+    # 因此处置不只是"以后不再上传"，而是【同时换成了新值】—— 旧值从此签不出可用的 token。
+    secret-key: ${sky.jwt.secret-key}
     # 过期时间 2 小时（毫秒）
     ttl: 7200000
     # 前端传递令牌的请求头名字
