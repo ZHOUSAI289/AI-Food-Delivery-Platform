@@ -68,3 +68,10 @@ sky:
     access-key-id: ${sky.alioss.access-key-id}
     access-key-secret: ${sky.alioss.access-key-secret}
     bucket-name: ${sky.alioss.bucket-name}
+
+# Knife4j 4.x（springdoc 内核）需要显式开启增强模式，否则 /doc.html 只是个空壳。
+knife4j:
+  enable: true
+  setting:
+    # 界面语言：可选值 zh_cn / en_us（对应 knife4j 的 OpenAPILanguageEnums）
+    language: zh_cn

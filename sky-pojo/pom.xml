@@ -21,11 +21,14 @@
         </dependency>
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-spring-boot-starter</artifactId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
         </dependency>
         <!-- jakarta.validation-api：OrdersCancelDTO 的 @NotBlank 需要它。
              迁移前这个包是从 knife4j-spring-boot-starter(3.0.2) 经 springfox 传递进来的
-             javax.validation:validation-api:2.0.2；Boot 3 下换成 jakarta 命名空间后，
+             javax.validation:validation-api:2.0.1.Final
+             （传递链：knife4j-spring-boot-starter 3.0.2 → springfox-boot-starter 3.0.0
+               → io.swagger:swagger-core 1.5.22 → javax.validation:validation-api 2.0.1.Final，
+               依赖树实测）；Boot 3 下换成 jakarta 命名空间后，
              该传递路径不再提供，必须在本模块显式声明。版本由 Boot 3.5.11 的 BOM 管理
              （jakarta-validation.version=3.0.2），故不写 <version>。
              注意：全仓只有这一个校验注解，且没有任何 @Valid/@Validated 消费点，

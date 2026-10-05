@@ -5,8 +5,8 @@ import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.RiderService;
 import com.sky.vo.OrderVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController("riderOrderController")
 @Slf4j
 @RequestMapping("/rider/order")
-@Api(tags = "骑手端订单接口")
+@Tag(name = "骑手端订单接口")
 public class OrderController {
 
     @Autowired
@@ -49,7 +49,7 @@ public class OrderController {
      * @param riderOrderPageDTO page / pageSize / status
      */
     @GetMapping("/list")
-    @ApiOperation("骑手配送单列表")
+    @Operation(summary = "骑手配送单列表")
     public Result<PageResult> riderOrderList(RiderOrderPageDTO riderOrderPageDTO){
         log.info("骑手配送单列表，参数：{}", riderOrderPageDTO);
         return Result.success(riderService.pageQueryOrderList(riderOrderPageDTO));
@@ -65,7 +65,7 @@ public class OrderController {
      * @param id 订单 id
      */
     @GetMapping("/detail/{id}")
-    @ApiOperation("配送单详情")
+    @Operation(summary = "配送单详情")
     public Result<OrderVO> getOrderDetail(@PathVariable Long id){
         return Result.success(riderService.getOrderDetail(id));
     }
@@ -78,7 +78,7 @@ public class OrderController {
      * @param id 订单 id
      */
     @PutMapping("/complete/{id}")
-    @ApiOperation("确认送达")
+    @Operation(summary = "确认送达")
     public Result completeOrder(@PathVariable Long id){
         log.info("骑手确认送达，订单ID：{}", id);
         riderService.completeOrder(id);

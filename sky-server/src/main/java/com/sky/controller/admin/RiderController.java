@@ -5,8 +5,8 @@ import com.sky.dto.RiderPageQueryDTO;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.RiderServiceBusiness;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController("adminRiderController")
 @RequestMapping("/admin/rider")
-@Api(tags = "管理端的骑手管理接口")
+@Tag(name = "管理端的骑手管理接口")
 public class RiderController {
 
     @Autowired
@@ -42,14 +42,14 @@ public class RiderController {
      * 分页参数走 query string（GET + 无注解参数，Spring 直接绑定到 DTO 字段），
      * 与管理端另外四个分页接口（employee / category / dish / setmeal）写法一致。
      *
-     * 入参用 @ApiOperation 标出来是为了 Knife4j 文档里能填参数；
+     * 入参用 @Operation 标出来是为了 Knife4j 文档里能填参数；
      * 出参是 PageResult { total, records: RiderVO[] }，RiderVO 里没有 password。
      *
      * @param riderPageQueryDTO
      * @return
      */
     @GetMapping("/page")
-    @ApiOperation("骑手的分页查询")
+    @Operation(summary = "骑手的分页查询")
     public Result<PageResult> page(RiderPageQueryDTO riderPageQueryDTO) {
         log.info("骑手分页查询，参数：{}", riderPageQueryDTO);
         PageResult pageResult = riderServiceBusiness.pageQuery(riderPageQueryDTO);
@@ -62,7 +62,7 @@ public class RiderController {
      * @return
      */
     @PostMapping
-    @ApiOperation("新增骑手")
+    @Operation(summary = "新增骑手")
     public Result addRider(@RequestBody RiderDTO riderDTO){
         log.info("新增骑手：{}",riderDTO);
         riderServiceBusiness.add(riderDTO);
@@ -75,7 +75,7 @@ public class RiderController {
      * @return
      */
     @PutMapping
-    @ApiOperation("编辑骑手")
+    @Operation(summary = "编辑骑手")
     public Result updateRider(@RequestBody RiderDTO riderDTO){
         log.info("编辑骑手：{}",riderDTO);
         riderServiceBusiness.update(riderDTO);
@@ -99,7 +99,7 @@ public class RiderController {
      * @return
      */
     @PostMapping("/status/{status}")
-    @ApiOperation("启用 / 停用骑手账号")
+    @Operation(summary = "启用 / 停用骑手账号")
     public Result startOrStop(@PathVariable Integer status, Long id){
         log.info("启用/停用骑手账号：status={}，id={}", status, id);
         riderServiceBusiness.startOrStop(status, id);

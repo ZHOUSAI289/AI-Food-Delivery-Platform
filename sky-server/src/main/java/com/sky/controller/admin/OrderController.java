@@ -8,8 +8,8 @@ import com.sky.result.Result;
 import com.sky.service.OrderService;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/admin/order")
 @Slf4j
-@Api(tags = "商家订单管理相关接口")
+@Tag(name = "商家订单管理相关接口")
 public class OrderController {
 
     @Autowired
@@ -29,7 +29,7 @@ public class OrderController {
      * @return
      */
     @GetMapping("/conditionsearch")
-    @ApiOperation(value = "订单搜索")
+    @Operation(summary = "订单搜索")
     public Result<PageResult> searchOrder(OrdersPageQueryDTO ordersPageQueryDTO){
         log.info("订单分页查询开始");
         PageResult pageResult = orderService.pageQueryOrder(ordersPageQueryDTO);
@@ -41,7 +41,7 @@ public class OrderController {
      * @return
      */
     @GetMapping("/statistics")
-    @ApiOperation(value = "各状态的订单统计")
+    @Operation(summary = "各状态的订单统计")
     public Result<OrderStatisticsVO> orderStatusStatistics(){
         log.info("统计各状态的订单数量");
         OrderStatisticsVO orderStatisticsVO = orderService.getOrderStatusStatistics();
@@ -54,7 +54,7 @@ public class OrderController {
      * @return
      */
     @GetMapping("/details/{id}")
-    @ApiOperation(value = "查询订单详情")
+    @Operation(summary = "查询订单详情")
     public Result orderDetails(@PathVariable Long id){
         OrderVO orderDetailsVO = orderService.details(id);
         return Result.success(orderDetailsVO);
@@ -65,7 +65,7 @@ public class OrderController {
      * @return
      */
     @PutMapping("/confirm/{id}")
-    @ApiOperation(value = "确认订单")
+    @Operation(summary = "确认订单")
     public Result orderConfirm(@PathVariable Long id){
         orderService.orderConfirm(id);
         return Result.success();
@@ -75,7 +75,7 @@ public class OrderController {
      * 拒单
      */
     @PutMapping("/rejection")
-    @ApiOperation(value = "拒绝订单")
+    @Operation(summary = "拒绝订单")
     public Result orderReject(@RequestBody OrdersRejectionDTO ordersRejectionDTO){
         log.info("拒绝订单：{}",ordersRejectionDTO);
         String tip = orderService.orderReject(ordersRejectionDTO);
@@ -86,7 +86,7 @@ public class OrderController {
      * 取消订单
      */
     @PutMapping("/cancel")
-    @ApiOperation(value = "取消订单")
+    @Operation(summary = "取消订单")
     public Result orderCancel(@RequestBody OrdersCancelDTO ordersCancelDTO){
         log.info("取消订单：{}",ordersCancelDTO);
         String tip = orderService.orderCancel(ordersCancelDTO);
@@ -97,7 +97,7 @@ public class OrderController {
      * 派送订单
      */
     @PutMapping("/delivery/{id}")
-    @ApiOperation(value = "派送订单")
+    @Operation(summary = "派送订单")
     public Result orderSend(@PathVariable Long id){
         log.info("派送订单，订单ID:{}",id);
         String tip = orderService.orderSend(id);
@@ -112,7 +112,7 @@ public class OrderController {
      * "骑手无法操作时，订单不至于永远卡在派送中"。
      */
     @PutMapping("/complete/{id}")
-    @ApiOperation(value = "管理员代确认送达（兜底）")
+    @Operation(summary = "管理员代确认送达（兜底）")
     public Result orderComplete(@PathVariable Long id){
         log.info("管理员代确认送达，订单ID：{}",id);
         orderService.orderComplete(id);
