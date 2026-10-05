@@ -45,3 +45,4 @@ sky-server/src/test/java/com/sky/set/
 
 # SDD（子代理驱动开发）的工作目录：任务简报、报告、进度台账 —— 都是本地产物
 .superpowers/
+*.err
