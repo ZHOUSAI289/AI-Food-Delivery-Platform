@@ -82,4 +82,27 @@ public class MessageConstant {
      * 提示语混用会让骑手以为自己的账号被停用了。
      */
     public static final String RIDER_ONLINE_STATUS_INVALID = "接单状态只能是 1（上线）或 0（离线）";
+    public static final String REVIEW_ALREADY_EXISTS   = "这单已经评价过了";
+    public static final String REVIEW_SCORE_INVALID    = "打分要在 1 到 5 星之间";
+    public static final String REVIEW_CONTENT_TOO_LONG = "评价内容太长了";
+    public static final String ORDER_NOT_COMPLETED     = "只能评价已完成的订单";
+    public static final String REVIEW_INDEX_CREATE_FAILED = "检索索引创建失败，请检查 ES 连接";
+    public static final String REVIEW_INDEX_SWITCH_FAILED = "检索索引切换失败，线上数据未受影响";
+    /** ES 的元数据查询（_cat / _count）没查出来：不能猜，直接中止 */
+    public static final String REVIEW_INDEX_QUERY_FAILED = "查询 ES 索引信息失败，请检查 ES 连接（本次未改动索引与别名）";
+    /** 一条都没写进去、旧索引却有数据：拒绝切别名，保住线上查询 */
+    public static final String REVIEW_INDEX_EMPTY_ABORT = "本次重建未写入任何文档，已中止（拒绝切换到空索引）：旧索引与线上查询未受影响";
+    /**
+     * 本批 _bulk 有条目失败：中止且绝不切别名。
+     * 两个 %d 分别是【本次重建真实写入成功的条数】【本批失败的条数】—— 必须是逐条统计出来的数字，
+     * 不能再是"失败数 = 整批条数"（I2：那样 indexed + failed 对不上总数，也看不出到底写进去几条）。
+     * 用 String.format 填充，与 GOODS_INVALID_TIP 同一个用法。
+     */
+    public static final String REVIEW_INDEX_BULK_FAILED = "本次重建已写入 %d 条、本批失败 %d 条，已中止：索引未切换，线上数据未受影响";
+    /**
+     * 进程内互斥（R4）：已有一次重建在进行。
+     * 并发重建会让先完成者的清扫逻辑把后者【正在灌的索引】当成残留删掉；
+     * 所以拿不到锁时立刻失败，而不是排队等待（管理端手动触发的运维接口，等下去没有意义）。
+     */
+    public static final String REVIEW_INDEX_BUSY = "另一次索引重建正在进行，请稍后再试";
 }

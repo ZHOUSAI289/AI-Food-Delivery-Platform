@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "reviewId":   { "type": "long" },
+      "orderId":    { "type": "long" },
+      "score":      { "type": "integer" },
+      "sentiment":  { "type": "integer" },
+      "tags":       { "type": "keyword" },
+      "dishIds":    { "type": "long" },
+      "dishNames":  { "type": "keyword" },
+      "content":    { "type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart" },
+      "createTime": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss" }
+    }
+  }
+}

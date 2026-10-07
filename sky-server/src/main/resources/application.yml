@@ -38,6 +38,9 @@ logging:
         controller: info
 
 sky:
+  ai:
+    # 环境变量优先（SKY_AI_API_KEY）；没有就是空 → 等于没配 key，自动降级
+    api-key: ${SKY_AI_API_KEY:}
   jwt:
     # ===== 统一登录配置（三端共用）=====
     # 三端共用一个密钥、一个请求头 token，身份由 token 里的 role claim 区分
@@ -48,9 +51,7 @@ sky:
     # 真值放在 application-dev.yml，那个文件被 .gitignore 排除，不会进仓库。
     # 写法和上面的 datasource / redis / wechat 完全一致：这里只留占位符。
     # （profile 文件的优先级高于 application.yml，所以 ${} 能解析到 dev 里的那一份）
-    #
-    # 2026-10 轮换记录：旧值曾明文提交过、已经公开在 git 历史里，
-    # 因此处置不只是"以后不再上传"，而是【同时换成了新值】—— 旧值从此签不出可用的 token。
+
     secret-key: ${sky.jwt.secret-key}
     # 过期时间 2 小时（毫秒）
     ttl: 7200000
@@ -78,6 +79,19 @@ sky:
     access-key-id: ${sky.alioss.access-key-id}
     access-key-secret: ${sky.alioss.access-key-secret}
     bucket-name: ${sky.alioss.bucket-name}
+
+  # 【必须是 sky 的直接子节点】—— 缩进到 alioss 下面会变成 sky.alioss.es.* ，
+  # 而 EsProperties 的 prefix 是 "sky.es"，那样一个值都读不到（静默失效，不报错）。
+  # 真值（uri 等）由 application-dev.yml 提供，这里只留占位符，和其它段写法一致。
+  es:
+    uri: ${sky.es.uri}
+    # 不能写成 ${sky.es.alias}：键名和占位符同名 → 循环占位符
+    # （只在 profile 里定义了 uri 时，启动会报 Circular placeholder reference）。
+    # 这里给字面默认值，与 EsProperties.alias 的默认值一致；profile 若要改就写 sky.es.alias。
+    alias: review
+    batch-size: ${sky.es.batch-size}
+    connect-timeout-ms: ${sky.es.connect-timeout-ms}
+    read-timeout-ms: ${sky.es.read-timeout-ms}
 
 # Knife4j 4.x 的增强模式在这里【必须关掉】—— 这是实测结论，不是图省事：
 # 1) Knife4j 4.5.0 传递进来的是 springdoc 2.3.0，与 Spring 6.2 / Boot 3.5 不兼容

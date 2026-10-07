@@ -204,4 +204,13 @@ public interface OrderMapper {
      * @return 影响行数；1 成功，0 表示不是他的单 / 状态已变 / 订单不存在
      */
     int updateCompleteByRider(Orders updateOrder);
+
+    /**
+     * 根据用户id和订单id查询订单
+     * @param userId
+     * @param orderId
+     * @return
+     */
+    @Select("select * from orders where user_id = #{userId} and id = #{orderId}")
+    Orders getByOrderIdandUserId(@Param("userId") Long userId, @Param("orderId") Long orderId);
 }
